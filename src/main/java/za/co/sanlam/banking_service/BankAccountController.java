@@ -38,6 +38,8 @@ public class BankAccountController {
             sql = "UPDATE accounts SET balance = balance - ? WHERE id = ?";
             int rowsAffected = jdbcTemplate.update(sql, amount, accountId);
             if (rowsAffected > 0) {
+                // After a successful withdrawal, publish a withdrawal event to SNS
+                publishWithdrawalEventsToSNSTopic(accountId, amount);
                 return "Withdrawal successful";
             } else {
                 // In case the update fails for reasons other than a balance check
@@ -47,16 +49,17 @@ public class BankAccountController {
             // Insufficient funds
             return "Insufficient funds for withdrawal";
         }
-        // After a successful withdrawal, publish a withdrawal event to SNS
+    }
+
+    private void publishWithdrawalEventsToSNSTopic(Long accountId, BigDecimal amount) {
         WithdrawalEvent event = new WithdrawalEvent(amount, accountId, "SUCCESSFUL");
         String eventJson = event.toJson(); // Convert event to JSON
-        String snsTopicArn = "arn:aws:sns:YOUR_REGION:YOUR_ACCOUNT_ID:YOUR_TOPIC_NAME";
+        String snsTopicArn = "arn:aws:sns:eu-west-1:069724177548:sanlam-banking-withdrawal-events";
         PublishRequest publishRequest = PublishRequest.builder()
                 .message(eventJson)
                 .topicArn(snsTopicArn)
                 .build();
         PublishResponse publishResponse = snsClient.publish(publishRequest);
-        return "Withdrawal successful";
     }
 }
 
