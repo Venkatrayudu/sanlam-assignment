@@ -1,8 +1,9 @@
 package za.co.sanlam.banking_service.service.impl;
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import za.co.sanlam.banking_service.model.Account;
 import za.co.sanlam.banking_service.model.WithdrawalEvent;
+import za.co.sanlam.banking_service.repository.AccountsRepository;
 import za.co.sanlam.banking_service.service.EventPublisherService;
 import za.co.sanlam.banking_service.service.WithdrawalService;
 
@@ -11,25 +12,24 @@ import java.math.BigDecimal;
 @Service
 public class WithdrawalServiceImpl implements WithdrawalService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final AccountsRepository accountsRepository;
     private final EventPublisherService eventPublisherService;
 
-    public WithdrawalServiceImpl(JdbcTemplate jdbcTemplate, EventPublisherService eventPublisherService) {
-        this.jdbcTemplate = jdbcTemplate;
+    public WithdrawalServiceImpl(EventPublisherService eventPublisherService, AccountsRepository accountsRepository) {
         this.eventPublisherService = eventPublisherService;
+        this.accountsRepository = accountsRepository;
     }
 
     @Override
     public String withdraw(Long accountId, BigDecimal amount) {
         // Check current balance
-        String sql = "SELECT balance FROM accounts WHERE id = ?";
-        BigDecimal currentBalance = jdbcTemplate.queryForObject(
-                sql, new Object[]{accountId}, BigDecimal.class);
+        Account account = accountsRepository.findById(accountId).get();
+        BigDecimal currentBalance = account.getAmount();
         if (currentBalance != null && currentBalance.compareTo(amount) >= 0) {
             // Update balance
-            sql = "UPDATE accounts SET balance = balance - ? WHERE id = ?";
-            int rowsAffected = jdbcTemplate.update(sql, amount, accountId);
-            if (rowsAffected > 0) {
+            account.setAmount(currentBalance.subtract(amount));
+            Account accountUpdated = accountsRepository.save(account);
+            if (accountUpdated.getAccountId().equals(accountId)) {
                 // After a successful withdrawal, publish a withdrawal event to SNS
                 WithdrawalEvent event = new WithdrawalEvent(amount, accountId, "SUCCESSFUL");
                 eventPublisherService.publish(event);
