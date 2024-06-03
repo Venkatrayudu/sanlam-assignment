@@ -1,7 +1,9 @@
 package za.co.sanlam.banking_service.service.impl;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import za.co.sanlam.banking_service.model.Account;
 import za.co.sanlam.banking_service.model.WithdrawalEvent;
 import za.co.sanlam.banking_service.repository.AccountsRepository;
@@ -11,6 +13,7 @@ import za.co.sanlam.banking_service.service.WithdrawalService;
 import java.math.BigDecimal;
 
 @Service
+@Slf4j
 public class WithdrawalServiceImpl implements WithdrawalService {
 
     private final AccountsRepository accountsRepository;
@@ -23,7 +26,9 @@ public class WithdrawalServiceImpl implements WithdrawalService {
 
     @Override
     @CircuitBreaker(name = "fallbackActivity", fallbackMethod = "fallbackActivityForDB")
+    @Transactional
     public String withdraw(Long accountId, BigDecimal amount) {
+        log.info("WithdrawalServiceImpl -> withdraw()");
         // Check current balance
         Account account = accountsRepository.findById(accountId).get();
         BigDecimal currentBalance = account.getAmount();

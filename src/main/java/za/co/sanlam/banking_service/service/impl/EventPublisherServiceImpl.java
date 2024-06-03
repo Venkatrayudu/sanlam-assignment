@@ -1,5 +1,6 @@
 package za.co.sanlam.banking_service.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sns.SnsClient;
@@ -9,6 +10,7 @@ import za.co.sanlam.banking_service.model.WithdrawalEvent;
 import za.co.sanlam.banking_service.service.EventPublisherService;
 
 @Service
+@Slf4j
 public class EventPublisherServiceImpl implements EventPublisherService {
 
     private SnsClient snsClient;
@@ -21,6 +23,7 @@ public class EventPublisherServiceImpl implements EventPublisherService {
 
     @Override
     public String publish(WithdrawalEvent event) {
+        log.info("EventPublisherServiceImpl -> publish()");
         String eventJson = event.toJson(); // Convert event to JSON
         String snsTopicArn = "arn:aws:sns:eu-west-1:069724177548:sanlam-banking-withdrawal-events";
         PublishRequest publishRequest = PublishRequest.builder()
