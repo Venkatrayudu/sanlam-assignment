@@ -1,5 +1,6 @@
 package za.co.sanlam.banking_service.service.impl;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.stereotype.Service;
 import za.co.sanlam.banking_service.model.Account;
 import za.co.sanlam.banking_service.model.WithdrawalEvent;
@@ -21,6 +22,7 @@ public class WithdrawalServiceImpl implements WithdrawalService {
     }
 
     @Override
+    @CircuitBreaker(name = "fallbackActivity", fallbackMethod = "fallbackActivityForDB")
     public String withdraw(Long accountId, BigDecimal amount) {
         // Check current balance
         Account account = accountsRepository.findById(accountId).get();
@@ -42,5 +44,9 @@ public class WithdrawalServiceImpl implements WithdrawalService {
             // Insufficient funds
             return "Insufficient funds for withdrawal";
         }
+    }
+
+    public String fallbackActivityForDB(Throwable throwable) {
+        return "Internal issue! Please try after sometime!!";
     }
 }
